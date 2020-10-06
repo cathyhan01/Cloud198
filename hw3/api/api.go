@@ -1,9 +1,11 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"github.com/gorilla/mux"
 	"strconv"
+	"encoding/json"
 )
 
 
@@ -32,8 +34,8 @@ func RegisterRoutes(router *mux.Router) error {
 	router.HandleFunc("/api/signup", signup).Methods(http.MethodPost)
 	router.HandleFunc("/api/getIndex", getIndex).Methods(http.MethodGet)
 	router.HandleFunc("/api/getpw", getPassword).Methods(http.MethodGet)
-	router.HandleFunc("/api/updatepw", updatePassword).Methods(http.MethodPost)
-	router.HandleFunc("/api/deleteuser", deleteUser).Methods(http.MethodPut)
+	router.HandleFunc("/api/updatepw", updatePassword).Methods(http.MethodPut)
+	router.HandleFunc("/api/deleteuser", deleteUser).Methods(http.MethodDelete)
 
 	return nil
 }
@@ -50,12 +52,12 @@ func getCookie(response http.ResponseWriter, request *http.Request) {
 	cookie, err := request.Cookie("access_token")
 
 	if err != nil {
-		http.Error(response, err.Error(), http.StatusBadRequest)
+		fmt.Fprintf(response, "")
 		return
 	}
 
 	accessToken := cookie.Value
-	fmt.Fprintln(response, accessToken)
+	fmt.Fprintf(response, accessToken)
 	return
 }
 
@@ -69,12 +71,12 @@ func getQuery(response http.ResponseWriter, request *http.Request) {
 	/*YOUR CODE HERE*/
 	query := request.URL.Query().Get("userID")
 
-	if query == nil {
-		http.Error(response, query.Error(), http.StatusBadRequest)
+	if len(query) < 1 {
+		fmt.Fprintf(response, "")
 		return
 	}
 
-	fmt.Fprintln(response, query)
+	fmt.Fprintf(response, query)
 	return
 }
 
@@ -100,14 +102,19 @@ func getJSON(response http.ResponseWriter, request *http.Request) {
 
 	err := json.NewDecoder(request.Body).Decode(&creds)
 
-	if err != nil {
+	if (err != nil) {
 		http.Error(response, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// credentials = append(credentials, creds)
-	fmt.Fprintln(response, creds.username + newline.request + creds.password)
+	if len(creds.Username) < 1 || len(creds.Password) < 1 {
+		http.Error(response, "400", http.StatusBadRequest)
+		return
+	}
+
+	fmt.Fprintf(response, creds.Username + "\n" + creds.Password)
 	return
+}
 
 func signup(response http.ResponseWriter, request *http.Request) {
 
@@ -136,6 +143,14 @@ func signup(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	if len(creds.Username) < 1 || len(creds.Password) < 1 {
+		http.Error(response, "400", http.StatusBadRequest)
+		return
+	}
+
+	response.WriteHeader(http.StatusCreated)
+  response.Write([]byte("201"))
+
 	credentials = append(credentials, creds)
 	return
 }
@@ -161,6 +176,7 @@ func getIndex(response http.ResponseWriter, request *http.Request) {
 
 	/*YOUR CODE HERE*/
 	creds := Credentials{}
+	var found bool = false
 
 	err := json.NewDecoder(request.Body).Decode(&creds)
 
@@ -169,10 +185,22 @@ func getIndex(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	if len(creds.Username) == 0 {
+		http.Error(response, "400", http.StatusBadRequest)
+		return
+	}
+
 	for index, val := range credentials {
-		if val.username == creds.username {
-			return strconv.Itoa(index)
+		if val.Username == creds.Username {
+			found = true
+			fmt.Fprintf(response, strconv.Itoa(index))
+			return
 		}
+	}
+
+	if !found {
+		http.Error(response, "400", http.StatusBadRequest)
+		return
 	}
 }
 
@@ -195,6 +223,7 @@ func getPassword(response http.ResponseWriter, request *http.Request) {
 
 	/*YOUR CODE HERE*/
 	creds := Credentials{}
+	var found bool = false
 
 	err := json.NewDecoder(request.Body).Decode(&creds)
 
@@ -203,11 +232,22 @@ func getPassword(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	for index, val := range credentials {
-		if val.username == creds.username {
-			fmt.Fprintln(response, pw)
+	if len(creds.Username) < 1 {
+		http.Error(response, "400", http.StatusBadRequest)
+		return
+	}
+
+	for index := range credentials {
+		if credentials[index].Username == creds.Username {
+			found = true
+			fmt.Fprintf(response, credentials[index].Password)
 			return
 		}
+	}
+
+	if !found {
+		http.Error(response, "400", http.StatusBadRequest)
+		return
 	}
 }
 
@@ -235,6 +275,7 @@ func updatePassword(response http.ResponseWriter, request *http.Request) {
 
 	/*YOUR CODE HERE*/
 	creds := Credentials{}
+	var found bool = false
 
 	err := json.NewDecoder(request.Body).Decode(&creds)
 
@@ -243,13 +284,24 @@ func updatePassword(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	for index, val := range credentials {
-		if val.username == creds.username {
-			// old pw    =    new pw
-			val.password = creds.password
+	if len(creds.Username) < 1 || len(creds.Password) < 1 {
+		http.Error(response, "400", http.StatusBadRequest)
+		return
+	}
+
+	for index := range credentials {
+		if credentials[index].Username == creds.Username {
+			found = true
+			//          old pw          =    new pw
+			credentials[index].Password = creds.Password
+			return
 		}
 	}
-	return
+
+	if !found {
+		http.Error(response, "400", http.StatusBadRequest)
+		return
+	}
 }
 
 func deleteUser(response http.ResponseWriter, request *http.Request) {
@@ -276,6 +328,7 @@ func deleteUser(response http.ResponseWriter, request *http.Request) {
 
 	/*YOUR CODE HERE*/
 	creds := Credentials{}
+	var found bool = false
 
 	err := json.NewDecoder(request.Body).Decode(&creds)
 
@@ -284,10 +337,25 @@ func deleteUser(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	if len(creds.Username) < 1 || len(creds.Password) < 1 {
+		http.Error(response, "400", http.StatusBadRequest)
+		return
+	}
+
 	for index, val := range credentials {
-		if val.username == creds.username && val.password == creds.password {
-			credentials = append(credentials[:index], credentials[index + 1:])
+		if val.Username == creds.Username && val.Password == creds.Password {
+			found = true
+			credentials = helperDelete(credentials, index)
 			return
 		}
 	}
+
+	if !found {
+		http.Error(response, "400", http.StatusBadRequest)
+		return
+	}
+}
+
+func helperDelete(slice []Credentials, i int) []Credentials {
+	return append(slice[:i], slice[i + 1:]...)
 }
