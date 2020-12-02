@@ -53,7 +53,7 @@ A variation of these commands are present in the "...or create a new repository 
 
 3. Add this project's repository as remote and alias it to `source`:
 ```
-git remote add source https://github.com/BearCloud/proj0.git
+git remote add source https://github.com/BearCloud/fa20-project-starter.git
 ```
 
 4. Run the following command to pull starter code:
@@ -67,3 +67,7 @@ go mod download
 ```
 
 6. You are done with setup.
+
+### More information
+
+Information specific to certain files, functionalities, and/or subparts of this project can be found in various markdown files.

@@ -12,7 +12,7 @@ import (
 var (
 	sendgridKey    string
 	sendgridClient *sendgrid.Client
-	defaultSender  = mail.NewEmail("CloudComputing Decal", "noreply@calcloud.org")
+	defaultSender  = mail.NewEmail("CloudComputing Decal", "cathyhan@berkeley.edu")
 	defaultScheme  = "http"
 )
 
